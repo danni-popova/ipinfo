@@ -2,6 +2,8 @@ package ipcache
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/redis/go-redis/v9"
@@ -22,18 +24,16 @@ func New(rdb *redis.Client) *Cache {
 }
 
 func (c *Cache) AddIPRange(ctx context.Context, info *ipdetails.IpRangeDetails) error {
-	startIp := ipdetails.IpToFloat(info.StartIP)
-
 	result := c.rdb.ZAdd(ctx, IPRedisKey, redis.Z{
 		Score:  ipdetails.IpToFloat(info.EndIp),
-		Member: fmt.Sprintf("%f", startIp),
+		Member: info,
 		// TODO: create a struct to hold all the remaining info in the member part
 	})
 
 	return result.Err()
 }
 
-func (c *Cache) LookupIP(ctx context.Context, ip string) error {
+func (c *Cache) LookupIP(ctx context.Context, ip string) (*ipdetails.IpRangeDetails, error) {
 	ipFloat := ipdetails.IpToFloat(ip)
 
 	result := c.rdb.ZRangeByScore(ctx, IPRedisKey, &redis.ZRangeBy{
@@ -42,14 +42,25 @@ func (c *Cache) LookupIP(ctx context.Context, ip string) error {
 		Offset: 0,
 		Count:  1,
 	})
+	if result.Err() != nil {
+		return nil, errors.New("couldn't do redis lookup")
+	}
 
 	if len(result.Val()) < 1 {
 		fmt.Println("no ip ranges contain the given IP")
-		return nil
+		return nil, nil
 	}
 
-	details := result.Val()[0]
-	fmt.Println(details)
+	var resultDetails ipdetails.IpRangeDetails
+	err := json.Unmarshal([]byte(result.Val()[0]), &resultDetails)
+	if err != nil {
+		return nil, err
+	}
 
-	return result.Err()
+	if ipdetails.IpToFloat(resultDetails.StartIP) > ipFloat {
+		fmt.Println("not in range")
+		return nil, nil
+	}
+
+	return &resultDetails, nil
 }

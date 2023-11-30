@@ -57,12 +57,12 @@ func (db *DB) ParseCSVFileDefault(filePath string) error {
 			StartIP:   record[0],
 			EndIp:     record[1],
 			JoinKey:   record[2],
-			IsHosting: db.StringToBool(record[3]),
-			IsProxy:   db.StringToBool(record[4]),
-			IsTor:     db.StringToBool(record[5]),
-			IsVPN:     db.StringToBool(record[6]),
-			IsRelay:   db.StringToBool(record[7]),
-			IsService: db.StringToBool(record[8]),
+			IsHosting: StringToBool(record[3]),
+			IsProxy:   StringToBool(record[4]),
+			IsTor:     StringToBool(record[5]),
+			IsVPN:     StringToBool(record[6]),
+			IsRelay:   StringToBool(record[7]),
+			IsService: StringToBool(record[8]),
 		}
 
 		// This will return an array containing CIDR blocks for the star and end ip
@@ -89,7 +89,7 @@ func (db *DB) ParseCSVFileDefault(filePath string) error {
 	return nil
 }
 
-func (db *DB) StringToBool(value string) bool {
+func StringToBool(value string) bool {
 	switch value {
 	case "true":
 		return true
